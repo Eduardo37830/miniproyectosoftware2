@@ -99,4 +99,16 @@ export class UsersService {
 
     return { accessToken };
   }
+
+  verifyUser(id: string) {
+    return this.userModel.findByIdAndUpdate(id, {
+      isVerified: true,
+      verificationCode: null,
+      verificationExpires: null,
+    }).exec();
+  }
+
+  findByEmail(email: string) {
+    return this.userModel.findOne({ email }).exec();
+  }
 }
