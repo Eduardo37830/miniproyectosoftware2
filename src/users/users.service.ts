@@ -6,13 +6,20 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+
 import { User as UserInterface } from './user.interface';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
 
   async register(
     createUserDto: CreateUserDto,
@@ -61,7 +68,35 @@ export class UsersService {
       _id: (savedUser._id as unknown as { toString(): string }).toString(),
       name: savedUser.name,
       email: savedUser.email,
-      isVerified: savedUser.isVerified
+      isVerified: savedUser.isVerified,
     };
+  }
+
+  async login(email: string, password: string): Promise<{ accessToken: string }> {
+    const user = await this.userModel.findOne({ email }).exec();
+
+    if (!user) {
+      throw new ConflictException('Invalid email or password');
+    } else if (!user.isVerified) {
+      throw new ConflictException('Email not verified');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new ConflictException('Invalid email or password');
+    }
+
+    const payload = {
+      sub: user.id.toString(),
+      email: user.email,
+      name: user.name,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get('JWT_ACCESS_SECRET'),
+      expiresIn: '15m',
+    });
+
+    return { accessToken };
   }
 }
