@@ -22,6 +22,10 @@ export class User {
 
   @Prop({ type: Date, nullable: true })
   verificationExpires?: Date | null;
+
+  // Added for type safety because timestamps: true is used
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
