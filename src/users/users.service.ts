@@ -9,10 +9,14 @@ import * as bcrypt from 'bcrypt';
 import { User as UserInterface } from './user.interface';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './user.dto';
+import { EmailService } from '../email/email.service'; // Import EmailService
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly emailService: EmailService, // Inject EmailService
+  ) {}
 
   async register(
     createUserDto: CreateUserDto,
@@ -53,15 +57,16 @@ export class UsersService {
       throw new InternalServerErrorException('Error saving user to database');
     }
 
-    console.log(
-      `Sending verification email to ${email} with code: ${verificationCode}`,
-    );
+    // console.log(
+    //   `Sending verification email to ${email} with code: ${verificationCode}`,
+    // );
+    await this.emailService.sendVerificationEmail(email, verificationCode); // Use EmailService to send email
 
     return {
       _id: (savedUser._id as unknown as { toString(): string }).toString(),
       name: savedUser.name,
       email: savedUser.email,
-      isVerified: savedUser.isVerified
+      isVerified: savedUser.isVerified,
     };
   }
 }
